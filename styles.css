@@ -55,7 +55,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .shell { display: flex; min-height: 100vh; background: var(--bg); }
 
 .sidebar {
-  width: 248px;
+  width: 280px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -149,31 +149,31 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .topbar {
   display: flex;
   align-items: center;
-  gap: 18px;
-  height: 76px;
-  width: min(1180px, calc(100% - 56px));
+  gap: 16px;
+  height: 64px;
+  width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
   padding: 0;
   background: transparent;
 }
 
-.topbar h1 { flex: none; font-size: 28px; }
+.topbar h1 {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 46%;
+  font-size: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .header-search {
-  flex: 1;
-  max-width: 380px;
+  flex: 1 1 180px;
+  min-width: 140px;
+  max-width: 360px;
   margin-left: auto;
   background: var(--surface);
 }
-
-.user-chip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: none;
-}
-
-.user-name { font-size: 14px; font-weight: 700; white-space: nowrap; }
 
 .brand {
   display: flex;
@@ -193,7 +193,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand-mark svg { width: 32px; height: 32px; }
 .brand-name { font-size: 18px; color: var(--ink); white-space: nowrap; }
 
-.top-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.user-chip {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
 
 .avatar {
   display: grid;
@@ -208,8 +212,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .page {
-  width: min(1180px, calc(100% - 56px));
-  margin: 4px auto 40px;
+  width: min(1180px, calc(100% - 48px));
+  margin: 8px auto 40px;
 }
 
 .page-head {
@@ -335,7 +339,7 @@ tbody tr:hover td { background: oklch(0.98 0.008 265); }
   letter-spacing: 0.01em;
 }
 
-.name-main { font-weight: 600; }
+.desc-cell { max-width: 460px; }
 .name-sub { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
 
 .col-actions { width: 88px; text-align: right; }
@@ -765,6 +769,6 @@ tbody tr:hover td.col-actions { background: oklch(0.98 0.008 265); }
   .page { margin-top: 18px; }
   .page-head, .toolbar { flex-direction: column; align-items: stretch; }
   .form-grid { grid-template-columns: 1fr; }
-  .user-name { display: none; }
-  .topbar h1 { font-size: 22px; }
+  .user-chip { display: none; }
+  .topbar h1 { font-size: 20px; max-width: none; }
 }
