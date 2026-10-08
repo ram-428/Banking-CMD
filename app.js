@@ -83,6 +83,7 @@ const els = {
 let customers = load();
 let editingId = null;
 let toastTimer = 0;
+let currentPage = "dashboard";
 
 function load() {
   try {
@@ -279,18 +280,23 @@ function renderDashboard() {
 }
 
 function showPage(page) {
-  const next = page === "customers" ? "customers" : "dashboard";
+  const next = page === "customers" || page === "services" ? page : "dashboard";
+  currentPage = next;
   $("page-dashboard").hidden = next !== "dashboard";
   $("page-customers").hidden = next !== "customers";
+  $("page-services").hidden = next !== "services";
   document.querySelectorAll(".nav-item").forEach((item) => {
     const active = item.dataset.page === next;
     item.classList.toggle("is-active", active);
     if (active) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
-  const pageName = next === "dashboard" ? "Dashboard" : "Customers";
+  const pageName = next === "services" ? "Service Master" : next === "customers" ? "Customer Management" : "Dashboard";
   $("page-title").textContent = pageName;
   document.title = `${pageName} · Banking CMD`;
+  const searchLabel = next === "services" ? "Search services" : "Search customers";
+  els.search.placeholder = searchLabel;
+  $("search-label").textContent = searchLabel;
   if (location.hash !== `#${next}`) history.replaceState(null, "", `#${next}`);
   document.querySelector(".shell").classList.remove("is-nav-open");
   window.scrollTo(0, 0);
@@ -477,6 +483,218 @@ function showToast(message) {
   }, 2200);
 }
 
+const SERVICE_KEY = "banking-cmd-services-v1";
+const SERVICE_SEED = [
+  {
+    code: "SER-001",
+    name: "SME Loan",
+    description: "Loan facility for small and medium enterprises.",
+    status: "Active"
+  }
+];
+
+const serviceEls = {
+  rows: $("service-rows"),
+  count: $("service-count"),
+  empty: $("service-empty"),
+  emptyTitle: $("service-empty-title"),
+  emptyCopy: $("service-empty-copy"),
+  statusFilter: $("service-status-filter"),
+  dialog: $("service-dialog"),
+  form: $("service-form"),
+  title: $("service-dialog-title"),
+  sub: $("service-dialog-sub"),
+  saveBtn: $("service-save-btn"),
+  cancelBtn: $("service-cancel-btn")
+};
+
+let services = loadServices();
+let editingServiceCode = null;
+
+function loadServices() {
+  try {
+    const raw = localStorage.getItem(SERVICE_KEY);
+    if (!raw) return SERVICE_SEED.map((row) => ({ ...row }));
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((row) => row && row.code && row.name)) {
+      return SERVICE_SEED.map((row) => ({ ...row }));
+    }
+    return parsed.map((row) => ({
+      code: row.code,
+      name: row.name,
+      description: row.description || "",
+      status: row.status === "Inactive" ? "Inactive" : "Active"
+    }));
+  } catch {
+    return SERVICE_SEED.map((row) => ({ ...row }));
+  }
+}
+
+function saveServices() {
+  localStorage.setItem(SERVICE_KEY, JSON.stringify(services));
+}
+
+function nextServiceCode() {
+  const max = services.reduce((highest, row) => {
+    const n = Number(String(row.code).replace(/\D/g, "")) || 0;
+    return Math.max(highest, n);
+  }, 0);
+  return `SER-${String(max + 1).padStart(3, "0")}`;
+}
+
+function filteredServices() {
+  const query = currentPage === "services" ? els.search.value.trim().toLowerCase() : "";
+  const status = serviceEls.statusFilter.value;
+  return services.filter((row) => {
+    const haystack = `${row.code} ${row.name} ${row.description}`.toLowerCase();
+    const matchesQuery = !query || haystack.includes(query);
+    const matchesStatus = !status || row.status === status;
+    return matchesQuery && matchesStatus;
+  });
+}
+
+function renderServices() {
+  const rows = filteredServices();
+  serviceEls.count.textContent = `${services.length} record${services.length === 1 ? "" : "s"}`;
+  serviceEls.rows.innerHTML = "";
+  const showEmpty = rows.length === 0;
+  serviceEls.empty.hidden = !showEmpty;
+  if (showEmpty) {
+    const filtering = (currentPage === "services" && els.search.value.trim()) || serviceEls.statusFilter.value;
+    serviceEls.emptyTitle.textContent = filtering ? "No matching services" : "No services yet";
+    serviceEls.emptyCopy.textContent = filtering
+      ? "Try a different service name, code, or status."
+      : "Add the first service to start the master.";
+  }
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="id-cell"></td>
+      <td class="name-main"></td>
+      <td class="desc-cell"></td>
+      <td><span class="pill"></span></td>
+      <td class="col-actions">
+        <button type="button" class="row-btn" data-action="view" aria-label="View">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8s2.4-4 6.5-4 6.5 4 6.5 4-2.4 4-6.5 4-6.5-4-6.5-4z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        </button>
+        <button type="button" class="row-btn" data-action="edit" aria-label="Edit">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.2 3.2 12.8 6.8 5.5 14.1H2v-3.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </button>
+      </td>`;
+    const cells = tr.children;
+    cells[0].textContent = row.code;
+    cells[1].textContent = row.name;
+    cells[2].textContent = row.description;
+    const pill = cells[3].querySelector(".pill");
+    pill.textContent = row.status;
+    pill.classList.add(statusClass(row.status));
+    cells[4].querySelector('[data-action="view"]').addEventListener("click", () => openServiceForm(row.code, "view"));
+    cells[4].querySelector('[data-action="edit"]').addEventListener("click", () => openServiceForm(row.code, "edit"));
+    serviceEls.rows.appendChild(tr);
+  });
+}
+
+function clearServiceErrors() {
+  serviceEls.form.querySelectorAll(".field").forEach((field) => field.classList.remove("is-invalid"));
+  serviceEls.form.querySelectorAll(".error").forEach((node) => {
+    node.textContent = "";
+  });
+}
+
+function showServiceErrors(errors) {
+  Object.entries(errors).forEach(([name, message]) => {
+    const input = serviceEls.form.elements[name];
+    const error = serviceEls.form.querySelector(`[data-for="${name}"]`);
+    if (input) input.closest(".field")?.classList.add("is-invalid");
+    if (error) error.textContent = message;
+  });
+  const first = serviceEls.form.querySelector(".is-invalid input, .is-invalid textarea");
+  first?.focus();
+}
+
+function setServiceMode(mode) {
+  const viewing = mode === "view";
+  serviceEls.dialog.dataset.mode = mode;
+  serviceEls.form.querySelectorAll("input, textarea").forEach((control) => {
+    if (control.name === "code") {
+      control.readOnly = true;
+      control.disabled = false;
+      return;
+    }
+    control.disabled = viewing;
+  });
+  serviceEls.saveBtn.hidden = viewing;
+  serviceEls.cancelBtn.textContent = viewing ? "Close" : "Cancel";
+}
+
+function openServiceForm(code, mode) {
+  clearServiceErrors();
+  const existing = code ? services.find((row) => row.code === code) : null;
+  const resolved = existing ? mode : "add";
+  editingServiceCode = resolved === "edit" ? existing.code : null;
+  serviceEls.title.textContent =
+    resolved === "view" ? "View service" : resolved === "edit" ? "Edit service" : "Add service";
+  serviceEls.sub.textContent =
+    resolved === "view"
+      ? "Service details are read-only."
+      : resolved === "edit"
+        ? "Update the service details and save."
+        : "Service code is assigned automatically.";
+  serviceEls.saveBtn.textContent = resolved === "edit" ? "Save changes" : "Save service";
+  const record = existing || {
+    code: nextServiceCode(),
+    name: "",
+    description: "",
+    status: "Active"
+  };
+  serviceEls.form.elements.code.value = record.code;
+  serviceEls.form.elements.name.value = record.name;
+  serviceEls.form.elements.description.value = record.description;
+  serviceEls.form.elements.status.value = record.status === "Inactive" ? "Inactive" : "Active";
+  setServiceMode(resolved);
+  if (!serviceEls.dialog.open) serviceEls.dialog.showModal();
+  if (resolved !== "view") serviceEls.form.elements.name.focus();
+}
+
+function closeServiceForm() {
+  serviceEls.dialog.close();
+  editingServiceCode = null;
+}
+
+function onServiceSubmit(event) {
+  event.preventDefault();
+  if (serviceEls.dialog.dataset.mode === "view") return;
+  clearServiceErrors();
+  const data = new FormData(serviceEls.form);
+  const record = {
+    code: String(data.get("code") || "").trim(),
+    name: String(data.get("name") || "").trim(),
+    description: String(data.get("description") || "").trim(),
+    status: String(data.get("status") || "").trim()
+  };
+  const errors = {};
+  if (!record.name) errors.name = "Enter the service name.";
+  if (!record.status) errors.status = "Select a status.";
+  const duplicate = services.some(
+    (row) => row.code !== record.code && row.name.toLowerCase() === record.name.toLowerCase()
+  );
+  if (record.name && duplicate) errors.name = "This service name is already in use.";
+  if (Object.keys(errors).length) {
+    showServiceErrors(errors);
+    return;
+  }
+  if (editingServiceCode) {
+    services = services.map((row) => (row.code === editingServiceCode ? record : row));
+    showToast("Service updated.");
+  } else {
+    services = [record, ...services];
+    showToast("Service added.");
+  }
+  saveServices();
+  closeServiceForm();
+  renderServices();
+}
+
 els.addBtn.addEventListener("click", () => openForm(null, "add"));
 $("dashboard-add").addEventListener("click", () => openForm(null, "add"));
 $("view-all-customers").addEventListener("click", () => openCustomers(""));
@@ -484,7 +702,14 @@ document.querySelectorAll(".hero-card").forEach((card) => {
   card.addEventListener("click", () => openCustomers(card.dataset.status || ""));
 });
 document.querySelectorAll(".nav-item").forEach((item) => {
-  item.addEventListener("click", () => showPage(item.dataset.page));
+  item.addEventListener("click", () => {
+    if (els.search.value) {
+      els.search.value = "";
+      render();
+      renderServices();
+    }
+    showPage(item.dataset.page);
+  });
 });
 $("menu-toggle").addEventListener("click", () => {
   document.querySelector(".shell").classList.add("is-nav-open");
@@ -510,10 +735,22 @@ $("close-dialog").addEventListener("click", closeForm);
 els.cancelBtn.addEventListener("click", closeForm);
 els.form.addEventListener("submit", onSubmit);
 els.search.addEventListener("input", () => {
+  if (currentPage === "services") {
+    renderServices();
+    return;
+  }
   if (els.search.value.trim() && $("page-customers").hidden) showPage("customers");
   render();
 });
 els.statusFilter.addEventListener("change", render);
+serviceEls.statusFilter.addEventListener("change", renderServices);
+$("add-service-btn").addEventListener("click", () => openServiceForm(null, "add"));
+$("close-service-dialog").addEventListener("click", closeServiceForm);
+serviceEls.cancelBtn.addEventListener("click", closeServiceForm);
+serviceEls.form.addEventListener("submit", onServiceSubmit);
+serviceEls.dialog.addEventListener("cancel", () => {
+  editingServiceCode = null;
+});
 
 els.dialog.addEventListener("cancel", () => {
   editingId = null;
@@ -521,4 +758,6 @@ els.dialog.addEventListener("cancel", () => {
 
 initLookups();
 render();
-showPage(location.hash === "#customers" ? "customers" : "dashboard");
+renderServices();
+const startPage = location.hash === "#customers" || location.hash === "#services" ? location.hash.slice(1) : "dashboard";
+showPage(startPage);
