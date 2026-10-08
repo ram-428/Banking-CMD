@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · Banking CMD</title>
+  <link rel="stylesheet" href="styles.css?v=21">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M5 25 16 5l5 9-11 11z" fill="#31408f"/><path d="M13 25 23 6l6 10-10 9z" fill="#ff7a45"/></svg>
+          </span>
+          <span class="brand-name">Banking CMD</span>
+        </div>
+        <button type="button" class="collapse-btn" id="collapse-sidebar" aria-expanded="true" aria-label="Collapse sidebar">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <nav class="side-nav" aria-label="Main">
+        <button type="button" class="nav-item is-active" data-page="dashboard" aria-current="page">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 7.2 8 2.8l5.5 4.4V13a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button type="button" class="nav-item" data-page="customers">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3.2 13.2c.7-2.2 2.4-3.3 4.8-3.3s4.1 1.1 4.8 3.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span class="nav-label">Customers</span>
+        </button>
+      </nav>
+    </aside>
+    <button type="button" class="nav-scrim" id="nav-scrim" aria-label="Close menu" tabindex="-1"></button>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button type="button" class="icon-btn menu-toggle" id="menu-toggle" aria-label="Open menu">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <h1 id="page-title">Dashboard</h1>
+        <label class="search header-search">
+          <span class="sr-only">Search customers</span>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.2 10.2 13.5 13.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <input type="search" id="search" placeholder="Search customers" autocomplete="off">
+        </label>
+        <div class="user-chip">
+          <span class="avatar" aria-hidden="true">BC</span>
+          <span class="user-name">Banking CMD</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="page" id="page-dashboard" aria-labelledby="page-title">
+          <div class="dash-top">
+            <section aria-label="Customer totals">
+              <div class="section-head section-head-end">
+                <button type="button" class="text-link" id="dashboard-add">Add customer</button>
+              </div>
+              <div class="hero-row">
+                <button type="button" class="hero-card" data-status="">
+                  <span class="hero-kicker">Total customers</span>
+                  <span class="hero-value" id="stat-total">0</span>
+                  <span class="hero-note">Open the full register</span>
+                </button>
+                <button type="button" class="hero-card hero-card-light" data-status="Active">
+                  <span class="hero-kicker">Active</span>
+                  <span class="hero-value" id="stat-active">0</span>
+                  <span class="hero-note">Currently banking</span>
+                </button>
+              </div>
+            </section>
+            <section class="panel" aria-labelledby="recent-title">
+              <div class="section-head">
+                <h2 id="recent-title">Recent customers</h2>
+                <button type="button" class="text-link" id="view-all-customers">See all</button>
+              </div>
+              <div id="recent-list"></div>
+              <div class="empty" id="recent-empty" hidden>
+                <p class="empty-title">No customers yet</p>
+                <p class="empty-copy">Add a customer to see them here.</p>
+              </div>
+            </section>
+          </div>
+          <div class="dash-bottom">
+            <section class="panel" aria-labelledby="activity-title">
+              <h2 id="activity-title">Status activity</h2>
+              <div class="bars" id="status-bars"></div>
+            </section>
+            <section class="panel" aria-labelledby="mix-title">
+              <h2 id="mix-title">Status mix</h2>
+              <div class="mix">
+                <div class="donut" id="status-donut" role="img" aria-label="Customer status mix"></div>
+                <ul class="legend" id="status-legend"></ul>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="page" id="page-customers" aria-labelledby="page-title" hidden>
+    <div class="page-head">
+      <div>
+        <p class="page-meta" id="record-count">0 records</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="add-btn">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Add customer
+      </button>
+    </div>
+
+    <div class="toolbar">
+      <label class="filter">
+        <span class="sr-only">Filter by status</span>
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </label>
+    </div>
+
+    <section class="table-wrap" aria-label="Customer list">
+      <table>
+        <thead>
+          <tr>
+            <th>Customer ID</th>
+            <th>Company name</th>
+            <th>Customer type</th>
+            <th>Trade license number</th>
+            <th>Contact person</th>
+            <th>Mobile number</th>
+            <th>Email</th>
+            <th>Relationship manager</th>
+            <th>Status</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="customer-rows"></tbody>
+      </table>
+      <div class="empty" id="empty-state" hidden>
+        <p class="empty-title" id="empty-title">No customers yet</p>
+        <p class="empty-copy" id="empty-copy">Add the first customer to start the registry.</p>
+      </div>
+    </section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="customer-dialog" class="dialog" aria-labelledby="dialog-title">
+    <form id="customer-form" novalidate>
+      <header class="dialog-head">
+        <div>
+          <h2 id="dialog-title">Add customer</h2>
+          <p class="dialog-sub" id="dialog-sub">Customer ID is assigned automatically.</p>
+        </div>
+        <button type="button" class="icon-btn" id="close-dialog" aria-label="Close">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+
+      <div class="dialog-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="customer-id">Customer ID <span class="req" title="Required">*</span></label>
+            <input id="customer-id" name="id" readonly placeholder="Assigned automatically">
+          </div>
+          <div class="field">
+            <label for="customer-type">Customer type <span class="req" title="Required">*</span></label>
+            <select id="customer-type" name="customerType" required>
+              <option value="">Select customer type</option>
+              <option value="Individual">Individual</option>
+              <option value="Company">Company</option>
+              <option value="Sole Proprietorship">Sole Proprietorship</option>
+              <option value="Partnership">Partnership</option>
+              <option value="Government / Organization">Government / Organization</option>
+            </select>
+            <p class="error" data-for="customerType"></p>
+          </div>
+
+          <div class="field">
+            <label for="company-name">Company name <span class="req" title="Required">*</span></label>
+            <input id="company-name" name="companyName" type="text" required maxlength="120" autocomplete="organization" placeholder="Enter company name">
+            <p class="error" data-for="companyName"></p>
+          </div>
+          <div class="field">
+            <label for="trade-license">Trade license number <span class="req" title="Required">*</span></label>
+            <input id="trade-license" name="tradeLicenseNumber" type="text" required maxlength="40" placeholder="Enter trade license number">
+            <p class="error" data-for="tradeLicenseNumber"></p>
+          </div>
+
+          <div class="field">
+            <label for="contact-person">Contact person <span class="req" title="Required">*</span></label>
+            <input id="contact-person" name="contactPerson" type="text" required maxlength="80" autocomplete="name" placeholder="Enter contact person">
+            <p class="error" data-for="contactPerson"></p>
+          </div>
+          <div class="field">
+            <label for="mobile">Mobile number <span class="req" title="Required">*</span></label>
+            <input id="mobile" name="mobile" type="tel" required maxlength="20" inputmode="tel" autocomplete="tel" placeholder="Enter mobile number">
+            <p class="error" data-for="mobile"></p>
+          </div>
+
+          <div class="field">
+            <label for="email">Email <span class="req" title="Required">*</span></label>
+            <input id="email" name="email" type="email" required maxlength="120" autocomplete="email" placeholder="Enter email address">
+            <p class="error" data-for="email"></p>
+          </div>
+          <div class="field">
+            <label for="relationship-manager">Relationship manager <span class="req" title="Required">*</span></label>
+            <select id="relationship-manager" name="relationshipManager" required>
+              <option value="">Select relationship manager</option>
+            </select>
+            <p class="error" data-for="relationshipManager"></p>
+          </div>
+
+          <div class="field field-span">
+            <label for="banking-requirement">Banking requirement <span class="req" title="Required">*</span></label>
+            <select id="banking-requirement" name="bankingRequirement" required>
+              <option value="">Select banking requirement</option>
+            </select>
+            <p class="error" data-for="bankingRequirement"></p>
+          </div>
+
+          <div class="field field-span">
+            <span class="field-label" id="status-label">Status <span class="req" title="Required">*</span></span>
+            <div class="status-toggle" role="radiogroup" aria-labelledby="status-label">
+              <label class="status-option status-active">
+                <input type="radio" name="status" value="Active" checked>
+                <span>Active</span>
+              </label>
+              <label class="status-option status-inactive">
+                <input type="radio" name="status" value="Inactive">
+                <span>Inactive</span>
+              </label>
+            </div>
+            <p class="error" data-for="status"></p>
+          </div>
+        </div>
+      </div>
+
+      <footer class="dialog-foot">
+        <button type="button" class="btn btn-ghost" id="cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="save-btn">Save customer</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script src="app.js?v=19"></script>
+</body>
+</html>
