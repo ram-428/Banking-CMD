@@ -294,6 +294,9 @@ function showPage(page) {
   const pageName = next === "services" ? "Service Master" : next === "customers" ? "Customer Management" : "Dashboard";
   $("page-title").textContent = pageName;
   document.title = `${pageName} · Banking CMD`;
+  const onDashboard = next === "dashboard";
+  document.querySelector(".topbar").classList.toggle("is-dashboard", onDashboard);
+  els.search.closest(".header-search").hidden = onDashboard;
   const searchLabel = next === "services" ? "Search services" : "Search customers";
   els.search.placeholder = searchLabel;
   $("search-label").textContent = searchLabel;

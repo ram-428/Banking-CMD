@@ -175,6 +175,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: var(--surface);
 }
 
+.header-search[hidden] { display: none; }
+.topbar.is-dashboard .user-chip { margin-left: auto; }
+
 .brand {
   display: flex;
   align-items: center;
