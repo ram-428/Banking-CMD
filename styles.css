@@ -343,6 +343,11 @@ tbody tr:hover td { background: oklch(0.98 0.008 265); }
 }
 
 .desc-cell { max-width: 460px; }
+.key-cell {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 13px;
+  color: var(--ink);
+}
 .name-sub { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
 
 .col-actions { width: 88px; text-align: right; }

@@ -279,25 +279,37 @@ function renderDashboard() {
   });
 }
 
+const PAGE_NAMES = {
+  dashboard: "Dashboard",
+  customers: "Customer Management",
+  services: "Service Master",
+  documents: "Document Type Master"
+};
+
 function showPage(page) {
-  const next = page === "customers" || page === "services" ? page : "dashboard";
+  const next = PAGE_NAMES[page] ? page : "dashboard";
   currentPage = next;
   $("page-dashboard").hidden = next !== "dashboard";
   $("page-customers").hidden = next !== "customers";
   $("page-services").hidden = next !== "services";
+  $("page-documents").hidden = next !== "documents";
   document.querySelectorAll(".nav-item").forEach((item) => {
     const active = item.dataset.page === next;
     item.classList.toggle("is-active", active);
     if (active) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
-  const pageName = next === "services" ? "Service Master" : next === "customers" ? "Customer Management" : "Dashboard";
+  const pageName = PAGE_NAMES[next];
   $("page-title").textContent = pageName;
   document.title = `${pageName} · Banking CMD`;
   const onDashboard = next === "dashboard";
   document.querySelector(".topbar").classList.toggle("is-dashboard", onDashboard);
   els.search.closest(".header-search").hidden = onDashboard;
-  const searchLabel = next === "services" ? "Search services" : "Search customers";
+  const searchLabel = next === "services"
+    ? "Search services"
+    : next === "documents"
+      ? "Search document types"
+      : "Search customers";
   els.search.placeholder = searchLabel;
   $("search-label").textContent = searchLabel;
   if (location.hash !== `#${next}`) history.replaceState(null, "", `#${next}`);
@@ -698,6 +710,229 @@ function onServiceSubmit(event) {
   renderServices();
 }
 
+const DOCUMENT_KEY = "banking-cmd-document-types-v1";
+const DOCUMENT_SEED = [
+  { code: "DOC-TL", name: "Trade License", folderKey: "trade-license", expiryApplicable: "Yes", status: "Active" },
+  { code: "DOC-MOA", name: "MOA", folderKey: "moa", expiryApplicable: "No", status: "Active" },
+  { code: "DOC-PASSPORT", name: "Passport", folderKey: "passport", expiryApplicable: "Yes", status: "Active" },
+  { code: "DOC-EID", name: "Emirates ID", folderKey: "emirates-id", expiryApplicable: "Yes", status: "Active" },
+  { code: "DOC-BANK", name: "Bank Statement", folderKey: "bank-statements", expiryApplicable: "No", status: "Active" },
+  { code: "DOC-AUDITED", name: "Audited Financials", folderKey: "audited-financials", expiryApplicable: "No", status: "Active" },
+  { code: "DOC-VAT", name: "VAT Certificate", folderKey: "vat", expiryApplicable: "Yes", status: "Active" },
+  { code: "DOC-FACILITY", name: "Facility Letter", folderKey: "facility-letters", expiryApplicable: "No", status: "Active" },
+  { code: "DOC-AGREEMENT", name: "Agreement", folderKey: "agreements", expiryApplicable: "No", status: "Active" },
+  { code: "DOC-CREDIT", name: "Credit Report", folderKey: "credit-reports", expiryApplicable: "No", status: "Active" }
+];
+
+const documentEls = {
+  rows: $("document-rows"),
+  count: $("document-count"),
+  empty: $("document-empty"),
+  emptyTitle: $("document-empty-title"),
+  emptyCopy: $("document-empty-copy"),
+  statusFilter: $("document-status-filter"),
+  dialog: $("document-dialog"),
+  form: $("document-form"),
+  title: $("document-dialog-title"),
+  sub: $("document-dialog-sub"),
+  saveBtn: $("document-save-btn"),
+  cancelBtn: $("document-cancel-btn")
+};
+
+let documentTypes = loadDocuments();
+let editingDocumentCode = null;
+
+function loadDocuments() {
+  try {
+    const raw = localStorage.getItem(DOCUMENT_KEY);
+    if (!raw) return DOCUMENT_SEED.map((row) => ({ ...row }));
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((row) => row && row.code && row.name && row.folderKey)) {
+      return DOCUMENT_SEED.map((row) => ({ ...row }));
+    }
+    return parsed.map((row) => ({
+      code: String(row.code).trim().toUpperCase(),
+      name: row.name,
+      folderKey: String(row.folderKey).trim().toLowerCase(),
+      expiryApplicable: row.expiryApplicable === "No" ? "No" : "Yes",
+      status: row.status === "Inactive" ? "Inactive" : "Active"
+    }));
+  } catch {
+    return DOCUMENT_SEED.map((row) => ({ ...row }));
+  }
+}
+
+function saveDocuments() {
+  localStorage.setItem(DOCUMENT_KEY, JSON.stringify(documentTypes));
+}
+
+function filteredDocuments() {
+  const query = currentPage === "documents" ? els.search.value.trim().toLowerCase() : "";
+  const status = documentEls.statusFilter.value;
+  return documentTypes.filter((row) => {
+    const haystack = `${row.code} ${row.name} ${row.folderKey} ${row.expiryApplicable}`.toLowerCase();
+    const matchesQuery = !query || haystack.includes(query);
+    const matchesStatus = !status || row.status === status;
+    return matchesQuery && matchesStatus;
+  });
+}
+
+function renderDocuments() {
+  const rows = filteredDocuments();
+  documentEls.count.textContent = `${documentTypes.length} record${documentTypes.length === 1 ? "" : "s"}`;
+  documentEls.rows.innerHTML = "";
+  const showEmpty = rows.length === 0;
+  documentEls.empty.hidden = !showEmpty;
+  if (showEmpty) {
+    const filtering = (currentPage === "documents" && els.search.value.trim()) || documentEls.statusFilter.value;
+    documentEls.emptyTitle.textContent = filtering ? "No matching document types" : "No document types yet";
+    documentEls.emptyCopy.textContent = filtering
+      ? "Try a different name, code, folder key, or status."
+      : "Add the first document type to start the master.";
+  }
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="id-cell"></td>
+      <td class="name-main"></td>
+      <td class="key-cell"></td>
+      <td><span class="pill"></span></td>
+      <td><span class="pill"></span></td>
+      <td class="col-actions">
+        <button type="button" class="row-btn" data-action="view" aria-label="View">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8s2.4-4 6.5-4 6.5 4 6.5 4-2.4 4-6.5 4-6.5-4-6.5-4z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        </button>
+        <button type="button" class="row-btn" data-action="edit" aria-label="Edit">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.2 3.2 12.8 6.8 5.5 14.1H2v-3.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </button>
+      </td>`;
+    const cells = tr.children;
+    cells[0].textContent = row.code;
+    cells[1].textContent = row.name;
+    cells[2].textContent = row.folderKey;
+    const expiry = cells[3].querySelector(".pill");
+    expiry.textContent = row.expiryApplicable;
+    expiry.classList.add(row.expiryApplicable === "Yes" ? "pill-active" : "pill-inactive");
+    const pill = cells[4].querySelector(".pill");
+    pill.textContent = row.status;
+    pill.classList.add(statusClass(row.status));
+    cells[5].querySelector('[data-action="view"]').addEventListener("click", () => openDocumentForm(row.code, "view"));
+    cells[5].querySelector('[data-action="edit"]').addEventListener("click", () => openDocumentForm(row.code, "edit"));
+    documentEls.rows.appendChild(tr);
+  });
+}
+
+function clearDocumentErrors() {
+  documentEls.form.querySelectorAll(".field").forEach((field) => field.classList.remove("is-invalid"));
+  documentEls.form.querySelectorAll(".error").forEach((node) => {
+    node.textContent = "";
+  });
+}
+
+function showDocumentErrors(errors) {
+  Object.entries(errors).forEach(([name, message]) => {
+    const input = documentEls.form.elements[name];
+    const error = documentEls.form.querySelector(`[data-for="${name}"]`);
+    const control = input && input.length && !input.tagName ? input[0] : input;
+    if (control) control.closest(".field")?.classList.add("is-invalid");
+    if (error) error.textContent = message;
+  });
+  const first = documentEls.form.querySelector(".is-invalid input, .is-invalid textarea, .is-invalid select");
+  first?.focus();
+}
+
+function setDocumentMode(mode) {
+  const viewing = mode === "view";
+  documentEls.dialog.dataset.mode = mode;
+  documentEls.form.querySelectorAll("input").forEach((control) => {
+    control.disabled = viewing;
+  });
+  documentEls.saveBtn.hidden = viewing;
+  documentEls.cancelBtn.textContent = viewing ? "Close" : "Cancel";
+}
+
+function openDocumentForm(code, mode) {
+  clearDocumentErrors();
+  const existing = code ? documentTypes.find((row) => row.code === code) : null;
+  const resolved = existing ? mode : "add";
+  editingDocumentCode = resolved === "edit" ? existing.code : null;
+  documentEls.title.textContent =
+    resolved === "view" ? "View document type" : resolved === "edit" ? "Edit document type" : "Add document type";
+  documentEls.sub.textContent =
+    resolved === "view"
+      ? "Document type details are read-only."
+      : resolved === "edit"
+        ? "Update the document type and save."
+        : "Define how this document is stored and whether it expires.";
+  documentEls.saveBtn.textContent = resolved === "edit" ? "Save changes" : "Save document type";
+  const record = existing || {
+    code: "",
+    name: "",
+    folderKey: "",
+    expiryApplicable: "Yes",
+    status: "Active"
+  };
+  documentEls.form.elements.name.value = record.name;
+  documentEls.form.elements.code.value = record.code;
+  documentEls.form.elements.folderKey.value = record.folderKey;
+  documentEls.form.elements.expiryApplicable.value = record.expiryApplicable === "No" ? "No" : "Yes";
+  documentEls.form.elements.status.value = record.status === "Inactive" ? "Inactive" : "Active";
+  setDocumentMode(resolved);
+  if (!documentEls.dialog.open) documentEls.dialog.showModal();
+  if (resolved !== "view") documentEls.form.elements.name.focus();
+}
+
+function closeDocumentForm() {
+  documentEls.dialog.close();
+  editingDocumentCode = null;
+}
+
+function onDocumentSubmit(event) {
+  event.preventDefault();
+  if (documentEls.dialog.dataset.mode === "view") return;
+  clearDocumentErrors();
+  const data = new FormData(documentEls.form);
+  const record = {
+    code: String(data.get("code") || "").trim().toUpperCase(),
+    name: String(data.get("name") || "").trim(),
+    folderKey: String(data.get("folderKey") || "").trim().toLowerCase(),
+    expiryApplicable: String(data.get("expiryApplicable") || "").trim(),
+    status: String(data.get("status") || "").trim()
+  };
+  const errors = {};
+  if (!record.name) errors.name = "Enter the document type name.";
+  if (!record.code) errors.code = "Enter the document code.";
+  else if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(record.code)) errors.code = "Use letters, numbers, and hyphens.";
+  if (!record.folderKey) errors.folderKey = "Enter the S3 folder key.";
+  else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(record.folderKey)) errors.folderKey = "Use lowercase letters, numbers, and hyphens.";
+  if (record.expiryApplicable !== "Yes" && record.expiryApplicable !== "No") errors.expiryApplicable = "Select whether expiry applies.";
+  if (!record.status) errors.status = "Select a status.";
+  const others = documentTypes.filter((row) => row.code !== editingDocumentCode);
+  if (record.name && others.some((row) => row.name.toLowerCase() === record.name.toLowerCase())) {
+    errors.name = "This document type name is already in use.";
+  }
+  if (record.code && others.some((row) => row.code === record.code)) {
+    errors.code = "This document code is already in use.";
+  }
+  if (record.folderKey && others.some((row) => row.folderKey === record.folderKey)) {
+    errors.folderKey = "This S3 folder key is already in use.";
+  }
+  if (Object.keys(errors).length) {
+    showDocumentErrors(errors);
+    return;
+  }
+  if (editingDocumentCode) {
+    documentTypes = documentTypes.map((row) => (row.code === editingDocumentCode ? record : row));
+    showToast("Document type updated.");
+  } else {
+    documentTypes = [record, ...documentTypes];
+    showToast("Document type added.");
+  }
+  saveDocuments();
+  closeDocumentForm();
+  renderDocuments();
+}
+
 els.addBtn.addEventListener("click", () => openForm(null, "add"));
 $("dashboard-add").addEventListener("click", () => openForm(null, "add"));
 $("view-all-customers").addEventListener("click", () => openCustomers(""));
@@ -710,6 +945,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       els.search.value = "";
       render();
       renderServices();
+      renderDocuments();
     }
     showPage(item.dataset.page);
   });
@@ -742,6 +978,10 @@ els.search.addEventListener("input", () => {
     renderServices();
     return;
   }
+  if (currentPage === "documents") {
+    renderDocuments();
+    return;
+  }
   if (els.search.value.trim() && $("page-customers").hidden) showPage("customers");
   render();
 });
@@ -754,6 +994,14 @@ serviceEls.form.addEventListener("submit", onServiceSubmit);
 serviceEls.dialog.addEventListener("cancel", () => {
   editingServiceCode = null;
 });
+documentEls.statusFilter.addEventListener("change", renderDocuments);
+$("add-document-btn").addEventListener("click", () => openDocumentForm(null, "add"));
+$("close-document-dialog").addEventListener("click", closeDocumentForm);
+documentEls.cancelBtn.addEventListener("click", closeDocumentForm);
+documentEls.form.addEventListener("submit", onDocumentSubmit);
+documentEls.dialog.addEventListener("cancel", () => {
+  editingDocumentCode = null;
+});
 
 els.dialog.addEventListener("cancel", () => {
   editingId = null;
@@ -762,5 +1010,7 @@ els.dialog.addEventListener("cancel", () => {
 initLookups();
 render();
 renderServices();
-const startPage = location.hash === "#customers" || location.hash === "#services" ? location.hash.slice(1) : "dashboard";
+renderDocuments();
+const startHash = location.hash.slice(1);
+const startPage = PAGE_NAMES[startHash] ? startHash : "dashboard";
 showPage(startPage);
