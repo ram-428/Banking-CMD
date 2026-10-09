@@ -163,10 +163,10 @@ function render() {
   els.empty.hidden = !showEmpty;
   if (showEmpty) {
     const filtering = els.search.value.trim() || els.statusFilter.value;
-    els.emptyTitle.textContent = filtering ? "No matching customers" : "No customers yet";
+    els.emptyTitle.textContent = filtering ? "No matching records." : "No records yet.";
     els.emptyCopy.textContent = filtering
       ? "Try a different company, ID, license, or status."
-      : "Add the first customer to start the registry.";
+      : "Records will appear here once they are added.";
   }
 
   rows.forEach((row) => {
@@ -262,7 +262,7 @@ function renderDashboard() {
   const safe = total || 1;
   const activeSweep = (active / safe) * 360;
   $("status-donut").style.background = total
-    ? `conic-gradient(var(--navy) 0 ${activeSweep}deg, var(--accent) ${activeSweep}deg 360deg)`
+    ? `conic-gradient(var(--accent) 0 ${activeSweep}deg, oklch(0.78 0.02 270) ${activeSweep}deg 360deg)`
     : "oklch(0.9 0.01 265)";
 
   const legend = $("status-legend");
@@ -279,15 +279,32 @@ function renderDashboard() {
   });
 }
 
-const PAGE_NAMES = {
-  dashboard: "Dashboard",
-  customers: "Customer Management",
-  services: "Service Master",
-  documents: "Document Type Master"
+const PAGE_META = {
+  dashboard: {
+    title: "Dashboard",
+    lead: "Customer totals, recent activity, and status mix.",
+    section: ""
+  },
+  customers: {
+    title: "Customers",
+    lead: "Maintain customer records, contacts, and banking status.",
+    section: "Customer Management"
+  },
+  services: {
+    title: "Services",
+    lead: "Maintain the services offered to customers.",
+    section: "Masters"
+  },
+  documents: {
+    title: "Document Types",
+    lead: "Maintain document types, storage folders, and expiry rules.",
+    section: "Masters"
+  }
 };
 
 function showPage(page) {
-  const next = PAGE_NAMES[page] ? page : "dashboard";
+  const next = PAGE_META[page] ? page : "dashboard";
+  const meta = PAGE_META[next];
   currentPage = next;
   $("page-dashboard").hidden = next !== "dashboard";
   $("page-customers").hidden = next !== "customers";
@@ -299,17 +316,27 @@ function showPage(page) {
     if (active) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
-  const pageName = PAGE_NAMES[next];
-  $("page-title").textContent = pageName;
-  document.title = `${pageName} · Banking CMD`;
-  const onDashboard = next === "dashboard";
-  document.querySelector(".topbar").classList.toggle("is-dashboard", onDashboard);
-  els.search.closest(".header-search").hidden = onDashboard;
+  $("page-title").textContent = meta.title;
+  $("page-lead").textContent = meta.lead;
+  document.title = `${meta.title} · Banking CMD`;
+  $("crumb-section").textContent = meta.section;
+  $("crumb-section").hidden = !meta.section;
+  $("crumb-sep").hidden = !meta.section;
+  $("crumb-sep-current").hidden = false;
+  $("crumb-current").textContent = meta.title;
+  const searchWrap = els.search.closest(".search");
+  const slot = document.querySelector(`#page-${next} .search-slot`);
+  if (slot) {
+    slot.appendChild(searchWrap);
+    searchWrap.hidden = false;
+  } else {
+    searchWrap.hidden = true;
+  }
   const searchLabel = next === "services"
-    ? "Search services"
+    ? "Search code or name..."
     : next === "documents"
-      ? "Search document types"
-      : "Search customers";
+      ? "Search code, name, folder..."
+      : "Search code, name, contact...";
   els.search.placeholder = searchLabel;
   $("search-label").textContent = searchLabel;
   if (location.hash !== `#${next}`) history.replaceState(null, "", `#${next}`);
@@ -576,10 +603,10 @@ function renderServices() {
   serviceEls.empty.hidden = !showEmpty;
   if (showEmpty) {
     const filtering = (currentPage === "services" && els.search.value.trim()) || serviceEls.statusFilter.value;
-    serviceEls.emptyTitle.textContent = filtering ? "No matching services" : "No services yet";
+    serviceEls.emptyTitle.textContent = filtering ? "No matching records." : "No records yet.";
     serviceEls.emptyCopy.textContent = filtering
       ? "Try a different service name, code, or status."
-      : "Add the first service to start the master.";
+      : "Records will appear here once they are added.";
   }
   rows.forEach((row) => {
     const tr = document.createElement("tr");
@@ -785,10 +812,10 @@ function renderDocuments() {
   documentEls.empty.hidden = !showEmpty;
   if (showEmpty) {
     const filtering = (currentPage === "documents" && els.search.value.trim()) || documentEls.statusFilter.value;
-    documentEls.emptyTitle.textContent = filtering ? "No matching document types" : "No document types yet";
+    documentEls.emptyTitle.textContent = filtering ? "No matching records." : "No records yet.";
     documentEls.emptyCopy.textContent = filtering
       ? "Try a different name, code, folder key, or status."
-      : "Add the first document type to start the master.";
+      : "Records will appear here once they are added.";
   }
   rows.forEach((row) => {
     const tr = document.createElement("tr");
@@ -939,6 +966,7 @@ $("view-all-customers").addEventListener("click", () => openCustomers(""));
 document.querySelectorAll(".hero-card").forEach((card) => {
   card.addEventListener("click", () => openCustomers(card.dataset.status || ""));
 });
+$("crumb-home").addEventListener("click", () => showPage("dashboard"));
 document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", () => {
     if (els.search.value) {
@@ -1012,5 +1040,5 @@ render();
 renderServices();
 renderDocuments();
 const startHash = location.hash.slice(1);
-const startPage = PAGE_NAMES[startHash] ? startHash : "dashboard";
+const startPage = PAGE_META[startHash] ? startHash : "dashboard";
 showPage(startPage);
